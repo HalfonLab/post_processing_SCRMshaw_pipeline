@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 from __future__ import absolute_import, division, print_function
 
-
-####################################################################################-------BRIEF DESCRIPTION------###################################################################################################
-#																																																					#
-#Date: September 2018																																																#
+####################################################################################-------BRIEF DESCRIPTION------###################################################################################################																																																					#
+# Halfon Lab
+# Date: Sept 2018																																															#
 #Purpose: This script is written to do some post processing on the SCRMshaw multiple offsets output and runs peaks calling algorithm (MACs) in order to get more robust CRM predictions						#
 #Input: It needs two input 																																															#
 # (i) combined SCRMshaw_offset's output (including multiple training sets and multiple methods)																														#
