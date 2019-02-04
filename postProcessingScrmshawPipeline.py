@@ -301,7 +301,7 @@ def peaksToScrms(macsOutputPath,peaksToScrmsName,TSET):
 					meth=setAndmeth[2]
 					amplitude=str(int(col[4])/10)	
 					
-				outfile.write(col[0]+'\t'+col[1]+'\t'+col[2]+'\t'+amplitude+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+set+'\t'+meth+'\n')
+				outfile.write(col[0]+'\t'+col[1]+'\t'+col[2]+'\t'+amplitude+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+'0'+'\t'+set+'\t'+meth+'\n')
 				
 	#path=os.path.abspath(peaksToScrmsName)
 	for root, dirs, files in os.walk(os.getcwd()):
@@ -313,7 +313,7 @@ def peaksToScrms(macsOutputPath,peaksToScrmsName,TSET):
 #---------------------------------------------------------------------------------------------------------------------------
 #This function will retrieve the SCRMshaw score of the peaks by intersecting it with SCRMshaw prediction file
 def intersect_peaks_and_scrms(peaksToScrmsPathBED,extractedScrmsPathBED,intersectedFileName):
-	peaksToScrmsPathBED.intersect(extractedScrmsPathBED,loj=True).merge(c=[4,20,6,7,8,9,10,11,12,13,14,15,16],o=['max','max','distinct','distinct','distinct','distinct','distinct','distinct','distinct','distinct','distinct','distinct','distinct']).saveas(subdirectory+'/'+intersectedFileName)
+	peaksToScrmsPathBED.intersect(extractedScrmsPathBED,loj=True).merge(c=[4,21,22,23,24,25,26,27,28,29,30,31,32,33],o=['max','max','distinct','distinct','max','distinct','distinct','distinct','distinct','max','distinct','distinct','distinct','distinct']).saveas(subdirectory+'/'+intersectedFileName)
 	
 #	path=os.path.abspath(intersectedFileName)
 	for root, dirs, files in os.walk(os.getcwd()):
@@ -331,7 +331,7 @@ def sortAndRank_basedOnAmplitude(intersectedFilePath,finalPeaksFileName):
 	ranks=pd.Series(range(1,numOfPeaks))
 	dataSorted=data.sort_values(by=3,ascending=False)
 	dataSorted=dataSorted.reset_index(drop=True)
-	dataSorted[17]=ranks
+	dataSorted[18]=ranks
 	#finalName='peaksFinal_'+TSET+'_'+method
 	dataSorted.to_csv(finalPeaksFileName,sep='\t',index=False,header=False)
 	
