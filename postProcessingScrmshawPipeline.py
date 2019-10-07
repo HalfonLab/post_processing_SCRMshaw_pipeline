@@ -416,7 +416,7 @@ def main():
 			extractedScrmsPath=extract_topN_scrms(fileFullLengthPath,numOfScrms,method,TSET)
 						
 			#calculating the min score to use as cutoff for macs from above file .
-			process = subprocess.Popen(["sort","-k4",extractedScrmsPath], stdout=subprocess.PIPE)
+			process = subprocess.Popen(["sort",'-V',"-k4",extractedScrmsPath], stdout=subprocess.PIPE)
 			output = process.communicate()[0]
 			tmp=output.split('\n')
 			tmp1=tmp[0].split('\t')	 
