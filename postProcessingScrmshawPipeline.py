@@ -125,21 +125,124 @@ def parse_output(outfile,numparse):
 # This function will extract user specified number of predictions from each of the offset for the given training set
 def extract_topN_scrms(fullLengthFilePath,cutoff,method,TSET):
 	#extract num of scrms from offset
-	extractedFileName=str(cutoff)+'.'+method+'_'+TSET+'.bed'
-	
-	with open(fullLengthFilePath,'r') as infile, open(os.path.join(subdirectory,extractedFileName),'w') as outfile:
-		for line in infile:
-
-			col=line.split('\t')
+	#extractedFileName=str(cutoff)+'.'+method+'_'+TSET+'.bed'
+	extractedFileName2='all_'+str(cutoff)+'.'+method+'_'+TSET+'.bed'
+	i=1
+	with open(fullLengthFilePath,'r') as infile, open(os.path.join(subdirectory,extractedFileName2),'w') as outfile:
+		prev_line=''
+		lines=[]
+		for current_line in infile:
+			#current_line2=current_line.strip()
+			#lines.append(current_line2)
+			prev_line2=prev_line.strip()
+			lines.append(prev_line2)
+			col=current_line.split('\t')
 			#print(col[10])
 			rank=col[16].strip('\n')
+
 			if int(rank) <= int(cutoff):
-				outfile.write(line)
+				outfile.write(current_line)
+			###del
+			if prev_line!='':
+				prev_rank=prev_line.split('\t')[16].strip('\n')
+				#print('rank of this line ',rank,' rank of prev line ',prev_rank)
+				if int(prev_rank) > int(rank):
+					#print("------------New file------------")
+					with open(os.path.join(subdirectory,'file'+str(i)+'.txt'), 'w') as f:
+						for item in lines:
+							f.write("%s\n" % item)
+					lines=[]
+					i+=1
 				
+			prev_line=current_line
+		else:
+			with open(os.path.join(subdirectory,'file'+str(i)+'.txt'), 'w') as f:
+				for item in lines:
+					f.write("%s\n" % item)
+			###del 
+	print('number of files generated ',i)
+	fileX=str(cutoff)+'.'+method+'_'+TSET+'.bed'
+	#tmp2= open(os.path.join(subdirectory,'cutoff_concatenated.txt'),'a')
+	tmp2= open(os.path.join(subdirectory,fileX),'a')
+	print(tmp2)
+	for j in range(1,i+1):
+		print("----------------------File no. ",j)
+		valuesScore=[]
+		fileName= os.path.join(subdirectory,'file'+str(j)+'.txt')
+		print(fileName)
+		with open(fileName,'r') as s:
+			for line in s:
+				if line!= '\n':
+					#print(line)
+					row=line.split('\t')
+					valuesScore.append(float(row[3]))
+
+		#print('list of scrmshae score of this file is: ',valuesScore)
+		# pull out the list from pandas frame
+		valuesScore=list(valuesScore)
+		valuesScore=sorted(valuesScore,key=float,reverse=True)
+		#valuesAmp=sorted(valuesAmp,key=float,reverse=True)
+
+		#for scores cutoff
+
+		#get coordinates of all the points
+		nPointsScore = len(valuesScore)
+		allCoordScore = np.vstack((range(nPointsScore), valuesScore)).T
+		#np.array([range(nPoints), values])
+
+		# get the first point
+		firstPointScore = allCoordScore[0]
+		# get vector between first and last point - this is the line
+		lineVecScore = allCoordScore[-1] - allCoordScore[0]
+		lineVecNormScore = lineVecScore / np.sqrt(np.sum(lineVecScore**2))
+
+		# find the distance from each point to the line:
+		# vector between all points and first point
+		vecFromFirstScore = allCoordScore - firstPointScore
+
+		# To calculate the distance to the line, we split vecFromFirst into two 
+		# components, one that is parallel to the line and one that is perpendicular 
+		# Then, we take the norm of the part that is perpendicular to the line and 
+		# get the distance.
+		# We find the vector parallel to the line by projecting vecFromFirst onto 
+		# the line. The perpendicular vector is vecFromFirst - vecFromFirstParallel
+		# We project vecFromFirst by taking the scalar product of the vector with 
+		# the unit vector that points in the direction of the line (this gives us 
+		# the length of the projection of vecFromFirst onto the line). If we 
+		# multiply the scalar product by the unit vector, we have vecFromFirstParallel
+		scalarProductScore = np.sum(vecFromFirstScore * np.matlib.repmat(lineVecNormScore, nPointsScore, 1), axis=1)
+		vecFromFirstParallelScore = np.outer(scalarProductScore, lineVecNormScore)
+		vecToLineScore = vecFromFirstScore - vecFromFirstParallelScore
+		# distance to line is the norm of vecToLine
+		distToLineScore = np.sqrt(np.sum(vecToLineScore ** 2, axis=1))
+		# knee/elbow is the point with max distance value
+		idxOfBestPointScore = np.argmax(distToLineScore)
+
+		#print("value of score at score elbow")
+		#print(valuesScore[idxOfBestPointScore])
+		scoreAtElbow=valuesScore[idxOfBestPointScore]
+				
+		print('------File no. ',j,' score elbow is at ',scoreAtElbow)
+		
+		########## extracting the predictions above the score elbow
+		#count=0
+		fileName2= 'cutoff_AllFiles_'+fileName
+		#tmp2= open(fileName2,'a')
+		with open(fileName,'r') as fileA:
+			for lineA in fileA:
+				if lineA!= '\n':
+					rowA=lineA.split('\t')
+					#print(line2)
+					#if the peak's score value is equal or above the score cutoff only then it will write to file
+					if float(rowA[3]) >= scoreAtElbow:
+						#print(row[16])
+						tmp2.write(lineA)
+						#count+=1
+	tmp2.close()
 	#path=os.path.abspath(extractedFileName)
 	for root, dirs, files in os.walk(os.getcwd()):
 		for name in files:
-			if name==extractedFileName:
+			if name==fileX:
 				path=os.path.abspath(os.path.join(root,name))
 	
 	return path
