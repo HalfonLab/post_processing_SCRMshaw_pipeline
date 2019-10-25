@@ -23,6 +23,7 @@ import csv
 import subprocess
 from collections import Counter
 import numpy as np
+import numpy.matlib as npm
 import pandas as pd
 
 
@@ -210,7 +211,7 @@ def extract_topN_scrms(fullLengthFilePath,cutoff,method,TSET):
 		# the unit vector that points in the direction of the line (this gives us 
 		# the length of the projection of vecFromFirst onto the line). If we 
 		# multiply the scalar product by the unit vector, we have vecFromFirstParallel
-		scalarProductScore = np.sum(vecFromFirstScore * np.matlib.repmat(lineVecNormScore, nPointsScore, 1), axis=1)
+		scalarProductScore = np.sum(vecFromFirstScore * npm.repmat(lineVecNormScore, nPointsScore, 1), axis=1)
 		vecFromFirstParallelScore = np.outer(scalarProductScore, lineVecNormScore)
 		vecToLineScore = vecFromFirstScore - vecFromFirstParallelScore
 		# distance to line is the norm of vecToLine
