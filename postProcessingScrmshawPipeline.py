@@ -157,7 +157,7 @@ def extract_topN_scrms(fullLengthFilePath,cutoff,method,TSET):
 				
 			prev_line=current_line
 		else:
-			with open(os.path.join(subdirectory,'file'+str(i)++'_'+method+'_'+TSET+'.txt'), 'w') as f:
+			with open(os.path.join(subdirectory,'file'+str(i)+'_'+method+'_'+TSET+'.txt'), 'w') as f:
 				for item in lines:
 					f.write("%s\n" % item)
 			###del 
@@ -167,7 +167,7 @@ def extract_topN_scrms(fullLengthFilePath,cutoff,method,TSET):
 	tmp2= open(os.path.join(subdirectory,fileX),'a')
 	#print(tmp2)
 	for j in range(1,i+1):
-		print("----------------------File no. ",j)
+		#print("----------------------File no. ",j)
 		valuesScore=[]
 		fileName= os.path.join(subdirectory,'file'+str(j)+'_'+method+'_'+TSET+'.txt')
 		#print(fileName)
