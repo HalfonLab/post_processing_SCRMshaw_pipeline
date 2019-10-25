@@ -149,7 +149,7 @@ def extract_topN_scrms(fullLengthFilePath,cutoff,method,TSET):
 				#print('rank of this line ',rank,' rank of prev line ',prev_rank)
 				if int(prev_rank) > int(rank):
 					#print("------------New file------------")
-					with open(os.path.join(subdirectory,'file'+str(i)+'.txt'), 'w') as f:
+					with open(os.path.join(subdirectory,'file'+str(i)+'_'+method+'_'+TSET+'.txt'), 'w') as f:
 						for item in lines:
 							f.write("%s\n" % item)
 					lines=[]
@@ -157,20 +157,20 @@ def extract_topN_scrms(fullLengthFilePath,cutoff,method,TSET):
 				
 			prev_line=current_line
 		else:
-			with open(os.path.join(subdirectory,'file'+str(i)+'.txt'), 'w') as f:
+			with open(os.path.join(subdirectory,'file'+str(i)++'_'+method+'_'+TSET+'.txt'), 'w') as f:
 				for item in lines:
 					f.write("%s\n" % item)
 			###del 
-	print('number of files generated ',i)
+	#print('number of files generated ',i)
 	fileX=str(cutoff)+'.'+method+'_'+TSET+'.bed'
 	#tmp2= open(os.path.join(subdirectory,'cutoff_concatenated.txt'),'a')
 	tmp2= open(os.path.join(subdirectory,fileX),'a')
-	print(tmp2)
+	#print(tmp2)
 	for j in range(1,i+1):
 		print("----------------------File no. ",j)
 		valuesScore=[]
-		fileName= os.path.join(subdirectory,'file'+str(j)+'.txt')
-		print(fileName)
+		fileName= os.path.join(subdirectory,'file'+str(j)+'_'+method+'_'+TSET+'.txt')
+		#print(fileName)
 		with open(fileName,'r') as s:
 			for line in s:
 				if line!= '\n':
@@ -223,7 +223,7 @@ def extract_topN_scrms(fullLengthFilePath,cutoff,method,TSET):
 		#print(valuesScore[idxOfBestPointScore])
 		scoreAtElbow=valuesScore[idxOfBestPointScore]
 				
-		print('------File no. ',j,' score elbow is at ',scoreAtElbow)
+		#print('------File no. ',j,' score elbow is at ',scoreAtElbow)
 		
 		########## extracting the predictions above the score elbow
 		#count=0
