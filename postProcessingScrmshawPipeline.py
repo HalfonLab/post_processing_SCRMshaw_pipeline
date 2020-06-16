@@ -124,7 +124,7 @@ def parse_output(outfile,numparse):
 #------------------------------------------------------------------------------------------------------
 
 # This function will extract user specified number of predictions from each of the offset for the given training set
-def extract_topN_scrms(fullLengthFilePath,cutoff,method,TSET):
+def extract_topN_scrms_scoreCurve(fullLengthFilePath,cutoff,method,TSET):
 	#extract num of scrms from offset
 	#extractedFileName=str(cutoff)+'.'+method+'_'+TSET+'.bed'
 	extractedFileName2='all_'+str(cutoff)+'.'+method+'_'+TSET+'.bed'
@@ -414,6 +414,7 @@ def peaksToScrms(macsOutputPath,peaksToScrmsName,TSET):
 				path=os.path.abspath(os.path.join(root,name))
 	return path
 	
+
 #---------------------------------------------------------------------------------------------------------------------------
 #This function will retrieve the SCRMshaw score of the peaks by intersecting it with SCRMshaw prediction file
 def intersect_peaks_and_scrms(peaksToScrmsPathBED,extractedScrmsPathBED,intersectedFileName):
@@ -442,7 +443,91 @@ def sortAndRank_basedOnAmplitude(intersectedFilePath,finalPeaksFileName):
 	path=os.path.abspath(finalPeaksFileName)
 	return path,numOfPeaks
 
+#---------------------------------------------------------------------------------------------------------------------------
+#This function will extract top N peaks based on user's choice of selection from amplitude curve 
+def extract_topN_scrms_amplitudeCurve(finalExtractedPeaksFileName,finalPeaksFilePath,topNmethod):
 
+	row=[]
+	valuesAmp=[]
+
+	with open(finalPeaksFilePath) as filePeaks:
+		for line in filePeaks:
+			row=line.split('\t')
+			valuesAmp.append(float(row[3]))
+	
+	#---
+	#Finding ELBOW point on Amplitude curve
+	valuesAmp=list(valuesAmp)
+	#print(valuesAmp)
+	#get coordinates of all the points
+	nPointsAmp = len(valuesAmp)
+	allCoordAmp = np.vstack((range(nPointsAmp), valuesAmp)).T
+	#np.array([range(nPoints), values])
+
+	# get the first point
+	firstPointAmp = allCoordAmp[0]
+	# get vector between first and last point - this is the line
+	lineVecAmp = allCoordAmp[-1] - allCoordAmp[0]
+	lineVecNormAmp = lineVecAmp / np.sqrt(np.sum(lineVecAmp**2))
+
+	# find the distance from each point to the line:
+	# vector between all points and first point
+	vecFromFirstAmp = allCoordAmp - firstPointAmp
+	scalarProductAmp = np.sum(vecFromFirstAmp * np.matlib.repmat(lineVecNormAmp, nPointsAmp, 1), axis=1)
+	vecFromFirstParallelAmp = np.outer(scalarProductAmp, lineVecNormAmp)
+	vecToLineAmp = vecFromFirstAmp - vecFromFirstParallelAmp
+	# distance to line is the norm of vecToLine
+	distToLineAmp = np.sqrt(np.sum(vecToLineAmp ** 2, axis=1))
+
+	# knee/elbow is the point with max distance value
+	idxOfBestPointAmp = np.argmax(distToLineAmp)
+	#print("value at 843")
+	#print(valuesAmp[idxOfBestPointAmp])
+	ampAtElbow=valuesAmp[idxOfBestPointAmp]
+	#print(idxOfBestPointScore,idxOfBestPointAmp)
+	
+	print("elbow amplitude",ampAtElbow)
+	print("rank of elbow amplitude",idxOfBestPointAmp)
+	#---
+	#Finding MEDIAN at amplitude curve
+	medianAmp=statistics.median(valuesAmp)
+	print("median of amplitude curve is ",medianAmp)
+	#find the closest rank for the mean of the amplitude curve
+	closestValTomedian=min(valuesAmp,key=lambda x:abs(x-medianAmp))
+	##print("closest value of amplitude to median of amplitude curve is ",closestValTomedian)
+	closestRankTomedian=valuesAmp.index(closestValTomedian)+1
+	print("rank of the closest value of amplitude to median of amplitude curve is ",closestRankTomedian)
+
+	#print("sending this value of rank of median outside this function",closestRankTomedian)
+	elbowPointRank=idxOfBestPointAmp
+	medianPointRank=closestRankTomedian
+	##return idxOfBestPointAmp,scoreAtElbow,ampAtElbow
+	##return closestRankTomedian,scoreAtElbow,ampAtElbow
+
+	if topNmethod == 'elbow':
+		countE=0
+		fN=finalExtractedPeaksFileName+'_ElbowPointAmplitudeCurve_'+str(elbowPointRank)+'_peaks.bed'
+		with open(finalPeaksFilePath) as fileRead, open(fN,'w') as fileWrite:
+			for line in fileRead:
+				row=line.split('\t')
+				lastCol=len(row)-1
+				if int(row[lastCol]) <= elbowPointRank:
+					fileWrite.write(line)
+					countE+=1
+		numberOfFinalPeaks=countE
+	elif topNmethod == 'median':
+		countM=0
+		fN=finalExtractedPeaksFileName+'_MedianPointAmplitudeCurve_'+str(medianPointRank)+'_peaks.bed'
+		with open(finalPeaksFilePath) as fileRead, open(fN,'w') as fileWrite:
+			for line in fileRead:
+				row=line.split('\t')
+				lastCol=len(row)-1
+				if int(row[lastCol]) <= medianPointRank:
+					fileWrite.write(line)
+					countM+=1
+		numberOfFinalPeaks=countM
+	pathF=os.path.abspath(fN)
+	return pathF,numberOfFinalPeaks
 
 #############################################-------MAIN FUNCTION-----##########################################################
 
@@ -464,14 +549,21 @@ def main():
 	parser=argparse.ArgumentParser()
 	parser.add_argument('-so','--scrmJoinedOutputFile',help='Scrmshaw Output file concatenated ',required=True)
 	parser.add_argument('-num','--numOfScrms',help='Number of Scrms to start from, default is 5000',default=5000)
+	parser.add_argument('-topN','--topNmethod',help='point of extraction for top peaks i.e Elbow or Median or None on amplitiude curve',default='elbow')
 	args = parser.parse_args()
 	scrmJoinedOutputFile=args.scrmJoinedOutputFile
 	numOfScrms=args.numOfScrms
 	numOfScrms=int(numOfScrms)
+	topNmethod=str(args.topNmethod)
 	my_path=os.getcwd()
 	if not os.path.isdir(my_path+'/'+subdirectory):
 		os.makedirs(my_path+'/'+subdirectory)
-		
+	
+	#checking if topNmethod value is correct from the options 
+	topNmethod = topNmethod.lower()
+	if topNmethod not in ['none', 'elbow', 'median']:
+		print('incorrect value of topN for extracting top peaks from amplitude curve')
+		exit()
 	#iterating through each keys (different training sets) of the three method's dictionary:
 	methods=['imm','hexmcd','pac']
 	
@@ -517,7 +609,7 @@ def main():
 			fileFullLengthPath=my_path		
 		
 			#extract num of scrms from offsets combined output
-			extractedScrmsPath=extract_topN_scrms(fileFullLengthPath,numOfScrms,method,TSET)
+			extractedScrmsPath=extract_topN_scrms_scoreCurve(fileFullLengthPath,numOfScrms,method,TSET)
 						
 			#calculating the min score to use as cutoff for macs from above file .
 			process = subprocess.Popen(["sort",'-V',"-k4",extractedScrmsPath], stdout=subprocess.PIPE)
@@ -568,8 +660,14 @@ def main():
 			numOfPeaks=peaksToScrmsPathBED.count()
 			finalPeaksFileName='scrmshawOutput_peaksCalled_'+TSET+'_'+method+'_'+str(numOfPeaks)+'_peaks.bed'
 			finalPeaksFilePath,numOfpeaks2=sortAndRank_basedOnAmplitude(intersectedFilePath,finalPeaksFileName)
-			print('Number of peaks for the set '+TSET+'_'+method+': '+str(numOfpeaks2))
-		
+			print('All number of peaks on the amplitude curve for the set '+TSET+'_'+method+': '+str(numOfpeaks2))
+			
+			if (topNmethod != 'none'):
+				
+				finalExtractedPeaksFileName='scrmshawOutput_peaksCalled_'+TSET+'_'+method
+				finalExtractedPeaksFilePath,numOfpeaks3=extract_topN_scrms_amplitudeCurve(finalExtractedPeaksFileName,finalPeaksFilePath,topNmethod)
+				print('Top number of peaks on the amplitude curve for the set '+TSET+'_'+method+': '+str(numOfpeaks3))
+				shutil.move(finalPeaksFileName, 'tmp/')
 			#moving the extra files to tmp directory
 			for root, dirs, files in os.walk(os.getcwd(),topdown=False):
 				for name in files:
