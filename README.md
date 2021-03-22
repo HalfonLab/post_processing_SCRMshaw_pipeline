@@ -34,7 +34,7 @@ module load pybedtools/0.8.0 \
 module load MACS2 
 
 Following is an example of command line execution.
->python postProcessingScrmshawPipeline.py  -so SCRMshawConcatenatedOutputFile  -num 5000
+>python postProcessingScrmshawPipeline.py  -so SCRMshawConcatenatedOutputFile  -num 5000  -topN Median
 
 3. PARAMETERS:
 
