@@ -655,7 +655,115 @@ def extract_topN_scrms_amplitudeCurve(finalExtractedPeaksFileName,finalPeaksFile
 					countM+=1
 		numberOfFinalPeaks=countM
 	pathF=os.path.abspath(fN)
-	return pathF,numberOfFinalPeaks
+	return pathF,numberOfFinalPeaks,fN
+
+#---------------------------------------------------------------------------------------------------------------------------
+#This function will read in gff file and save all genes information (coordinates) into a dictionary
+def parse_gff(gff_file):
+	gene_dict = {}
+	with open(gff_file, 'r') as gff:
+		for line in gff:
+			if not line.startswith('#'):
+				fields = line.strip().split('\t')
+				if len(fields) >= 9 and fields[2] == 'gene':
+					gene_id = fields[8].split(';')[0].replace('ID=', '')
+					gene_dict[gene_id] = (fields[0], int(fields[3]), int(fields[4]))
+	return gene_dict
+	
+#---------------------------------------------------------------------------------------------------------------------------
+#This function
+def find_flanking_genes(scrm_gene_list, gene_dict, scrm_chr, scrm_start, scrm_end):
+	left_flank_gene = None
+	right_flank_gene = None
+	for gene in scrm_gene_list:
+		if gene in gene_dict:
+			gene_chr, gene_start, gene_end = gene_dict[gene]
+			if gene_chr == scrm_chr:
+				if scrm_start >= gene_start and scrm_end <= gene_end:
+					# SCRM is completely contained within the gene
+					left_flank_gene = right_flank_gene = gene
+				elif scrm_start < gene_start < scrm_end:  # Overlaps on the left side
+					left_flank_gene = gene
+				#elif scrm_start < gene_start < scrm_end and (left_flank_gene is not None) and right_flank_gene is None:  #  both genes are overlapping on the left side
+				#	right_flank_gene = gene
+				elif scrm_start < gene_end < scrm_end and right_flank_gene is None:  # Overlaps on the right side
+					right_flank_gene = gene
+				#elif scrm_start < gene_end < scrm_end and (right_flank_gene is not None) and left_flank_gene is None:  # both genes are overlapping on the right side
+				#	left_flank_gene = gene
+				elif gene_end > scrm_start and (left_flank_gene is None or gene_end > gene_dict[left_flank_gene][2]):
+					left_flank_gene = gene
+				elif gene_start < scrm_end and (right_flank_gene is None or gene_start < gene_dict[right_flank_gene][1]):
+					right_flank_gene = gene
+
+	return left_flank_gene, right_flank_gene
+	#log_file.close()
+
+#----
+def update_scrmsOut(scrmsOut_file, gene_dict,path_log_file):
+	updated_lines = []
+	with open(scrmsOut_file, 'r') as scrmsOut, open(path_log_file, "a") as logfile:
+		for line in scrmsOut:
+			fields = line.strip().split('\t')
+			genes_col6 = fields[5].split(',')
+			genes_col11 = fields[10].split(',')
+			# save_log line for any  case where right or left flanks have more than one gene
+			if len(genes_col6) > 1 or len(genes_col11) >1:
+				logfile.write(line)
+
+			if len(genes_col6) == 2 and set(genes_col6) == set(genes_col11):
+				#print(line)
+				#logfile.write(line)
+				scrm_chr, scrm_start, scrm_end = fields[0], int(fields[1]), int(fields[2])
+				left_flank_gene, right_flank_gene = find_flanking_genes(genes_col6, gene_dict, scrm_chr, scrm_start, scrm_end)
+
+				if left_flank_gene and right_flank_gene:
+					#print('updated',left_flank_gene,'-',right_flank_gene)
+					fields[5] = left_flank_gene
+					fields[6] = left_flank_gene
+					fields[10] = right_flank_gene
+					fields[11] = right_flank_gene
+				else:
+					print("NO")
+					print(left_flank_gene)
+					print(right_flank_gene)
+			#if right flanking gene has more than one gene and left has just 1 gene, we are gonna loose the third one
+			elif len(genes_col6) > 1 and set(genes_col6) != set(genes_col11) and len(genes_col11) ==1:
+				#logfile.write(line)
+				fields[5]=fields[5].split(',')[0]
+				fields[6] = fields[6].split(',')[0]
+			# if left flanking gene has more than one gene and right has just 1 gene, we are gonna loose the third one
+			elif len(genes_col11) > 1 and set(genes_col6) != set(genes_col11) and len(genes_col6) ==1:
+				#logfile.write(line)
+				fields[10]=fields[10].split(',')[0]
+				fields[11] = fields[11].split(',')[0]
+			elif len(genes_col11) > 1 and set(genes_col6) != set(genes_col11) and len(genes_col6) >1:
+				fields[5]=fields[5].split(',')[0]
+				fields[6] = fields[6].split(',')[0]
+				fields[10]=fields[10].split(',')[0]
+				fields[11] = fields[11].split(',')[0]
+
+			##if both right and left flanking gene has more than one gene then we are gonna loose everything except 2
+			elif len(genes_col6) > 2 and set(genes_col6) == set(genes_col11):
+				#logfile.write(line)
+				fields[5]=fields[5].split(',')[0]
+				fields[6] = fields[6].split(',')[0]
+				fields[10]=fields[10].split(',')[1]
+				fields[11] = fields[11].split(',')[1]
+			updated_lines.append('\t'.join(fields))
+
+	return updated_lines
+
+#----
+def write_updated_scrmsOut(scrmsOut_file, updated_lines):
+	with open(scrmsOut_file, 'w') as scrmsOut:
+		scrmsOut.write('\n'.join(updated_lines))
+	#pathFinal=os.path.abspath(scrmsOut)
+	#path=os.path.abspath(peaksToScrmsName)
+	for root, dirs, files in os.walk(os.getcwd()):
+		for name in files:
+			if name==scrmsOut_file:
+				pathFinal=os.path.abspath(os.path.join(root,name))
+	return pathFinal
 
 #############################################-------MAIN FUNCTION-----##########################################################
 
@@ -678,8 +786,10 @@ def main():
 	parser.add_argument('-so','--scrmJoinedOutputFile',help='Scrmshaw Output file concatenated ',required=True)
 	parser.add_argument('-num','--numOfScrms',help='Number of Scrms to start from, default is 5000',default=5000)
 	parser.add_argument('-topN','--topNmethod',help='point of extraction for top peaks i.e Elbow or Median or None on amplitiude curve',default='elbow')
+	parser.add_argument('-gff','--gffFile',help='GFF file used for running SCRMshaw ',required=True)
 	args = parser.parse_args()
 	scrmJoinedOutputFile=args.scrmJoinedOutputFile
+	gffFile=args.gffFile
 	numOfScrms=args.numOfScrms
 	numOfScrms=int(numOfScrms)
 	topNmethod=str(args.topNmethod)
@@ -699,7 +809,12 @@ def main():
 	methods_val=[None,None,None]
 	num=0
 	x=0
-		
+	
+	#gff file path
+	gffFile=os.path.abspath(gffFile)
+	#saving all the genes coorddiates from GFF
+	gene_dict = parse_gff(gffFile)
+	
 	#Parsing the output file into separate files for each training set and each method via creating three dictionaries for each method: keys being the names of training sets associated with that method 
 	scrmJoinedOutputFile=os.path.abspath(scrmJoinedOutputFile)
 	methods_val[0],methods_val[1],methods_val[2]=parse_output(scrmJoinedOutputFile,35000)
@@ -791,16 +906,45 @@ def main():
 			
 			#reading intersected file as pandas dataframe to sort based on amplitude	
 			numOfPeaks=peaksToScrmsPathBED.count()
-			finalPeaksFileName='scrmshawOutput_peaksCalled_'+TSET+'_'+method+'_'+str(numOfPeaks)+'_peaks.bed'
-			finalPeaksFilePath,numOfpeaks2=sortAndRank_basedOnAmplitude(intersectedFilePath,finalPeaksFileName)
+			finalPeaksFileNameA='scrmshawOutput_peaksCalled_'+TSET+'_'+method+'_'+str(numOfPeaks)+'_peaks.bed'
+			finalPeaksFilePath,numOfpeaks2=sortAndRank_basedOnAmplitude(intersectedFilePath,finalPeaksFileNameA)
 			print('All number of peaks on the amplitude curve for the set '+TSET+'_'+method+': '+str(numOfpeaks2))
+			
+			#adding chunk from filtering Flanking Genes--
+			#finalPeaksFileName='scrmshawOutput_peaksCalled_'+TSET+'_'+method+'_'+str(numOfPeaks)+'_peaks.bed'
+			
+			#log_file = open("log_flankingMoreThanOneGenes.txt", "w")
+			#path_log_file=os.path.abspath(log_file)
+			log_file_path = "log_flankingMoreThanOneGenes_"+TSET+'_'+method+".txt"
+			log_file = open(log_file_path, "w")
+			path_log_file = os.path.abspath(log_file_path)
+			
 			
 			if (topNmethod != 'none'):
 				
-				finalExtractedPeaksFileName='scrmshawOutput_peaksCalled_'+TSET+'_'+method
-				finalExtractedPeaksFilePath,numOfpeaks3=extract_topN_scrms_amplitudeCurve(finalExtractedPeaksFileName,finalPeaksFilePath,topNmethod)
+				finalExtractedPeaksFileNameB='scrmshawOutput_peaksCalled_'+TSET+'_'+method#+'_peaks.bed'
+				finalPeaksFilePath,numOfpeaks3,finalExtractedPeaksFileNameB2=extract_topN_scrms_amplitudeCurve(finalExtractedPeaksFileNameB,finalPeaksFilePath,topNmethod)
 				print('Top number of peaks on the amplitude curve for the set '+TSET+'_'+method+': '+str(numOfpeaks3))
-				shutil.move(finalPeaksFileName, 'tmp/')
+				shutil.move(finalPeaksFileNameA, 'tmp/')
+				updated_lines = update_scrmsOut(finalPeaksFilePath, gene_dict,path_log_file)
+				finalPeaksFilePath=write_updated_scrmsOut(finalExtractedPeaksFileNameB2, updated_lines)
+				#shutil.move(finalExtractedPeaksFileNameB, 'tmp/')
+			else:
+				updated_lines = update_scrmsOut(finalPeaksFilePath, gene_dict,path_log_file)
+				finalPeaksFilePath=write_updated_scrmsOut(finalPeaksFileNameA, updated_lines)
+			# adding chunk from filtering Flanking Genes--
+# 			finalPeaksFileName='scrmshawOutput_peaksCalled_'+TSET+'_'+method+'_'+str(numOfPeaks)+'_peaks.bed'
+# 			
+# 			log_file = open("log_flankingMoreThanOneGenes.txt", "w")
+# 			path_log_file=os.path.abspath(log_file)
+# 			log_file_path = "log_flankingMoreThanOneGenes.txt"
+# 			log_file = open(log_file_path, "w")
+# 			path_log_file = os.path.abspath(log_file_path)
+#
+#			updated_lines = update_scrmsOut(finalPeaksFilePath, gene_dict,path_log_file)
+#			finalPeaksFilePath=write_updated_scrmsOut(finalPeaksFileName, updated_lines)
+			log_file.close()
+			#shutil.move(finalExtractedPeaksFileNameB, 'tmp/')
 			#moving the extra files to tmp directory
 			for root, dirs, files in os.walk(os.getcwd(),topdown=False):
 				for name in files:
