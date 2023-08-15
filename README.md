@@ -20,7 +20,7 @@ This script is written to do post processing steps on the SCRMshaw multiple offs
 
 1. INPUT:
 
-The only file required for this script is the concatenated output(set of predictions) of SCRMshaw-HD (10 bp offset) and the number of predictions to take if more than 5000 (default).
+The only file required for this script is the concatenated output(set of predictions) of SCRMshaw-HD (10 bp offset) and the number of predictions to take if more than 5000 (default), and gff annotation file.
 
 2.  USAGE:
 
@@ -34,14 +34,16 @@ module load pybedtools/0.8.0 \
 module load MACS2 
 
 Following is an example of command line execution.
->python postProcessingScrmshawPipeline.py  -so SCRMshawConcatenatedOutputFile  -num 5000  -topN Median
+>python postProcessingScrmshawPipeline.py  -so SCRMshawConcatenatedOutputFile  -num 5000  -topN Median -gff GFFfile
 
 3. PARAMETERS:
 
 	-so	<str>	The output file for concatenation shell scripySCRMshaw\
 	-num	<int>	Number of predictions to processs
+	-topN	<str>	Median/Elbow/All
+	-gff	<str>	GFF file path
 
-4. OUTPUT:
+5. OUTPUT:
 
 Depending on user's input, if the input consists of multiple training sets the pipeline will create peaks file for each individual training set.
 And a temporary folder which will have the files created during execution
