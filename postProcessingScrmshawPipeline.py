@@ -914,9 +914,9 @@ def main():
 			#finalPeaksFileName='scrmshawOutput_peaksCalled_'+TSET+'_'+method+'_'+str(numOfPeaks)+'_peaks.bed'
 			
 			#log_file = open("log_flankingMoreThanOneGenes.txt", "w")
-			#path_log_file=os.path.abspath(log_file)
-			log_file_path = "log_flankingMoreThanOneGenes_"+TSET+'_'+method+".txt"
-			log_file = open(log_file_path, "w")
+			#log_file_path = "log_flankingMoreThanOneGenes_"+TSET+'_'+method+".txt"
+			log_file_path = "log_flankingMoreThanOneGenesFromAllSets.txt"
+			log_file = open(log_file_path, "a")
 			path_log_file = os.path.abspath(log_file_path)
 			
 			
