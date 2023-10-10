@@ -15,6 +15,8 @@ import pybedtools
 import statistics
 import argparse
 import sys
+import re
+import pprint
 import shutil
 from scipy import stats
 import scipy.stats
@@ -658,6 +660,22 @@ def extract_topN_scrms_amplitudeCurve(finalExtractedPeaksFileName,finalPeaksFile
 	return pathF,numberOfFinalPeaks,fN
 
 #---------------------------------------------------------------------------------------------------------------------------
+#this funnction will take out gene id from the line of gff;  could vary a little bit
+
+def extract_gene_id(input_string):
+    # Define a regular expression pattern to match 'ID=gene-' followed by any characters until a semicolon or space
+    pattern = r'ID=gene-[^; ]+'
+
+    # Use the findall function to extract all matching substrings
+    gene_ids = re.findall(pattern, input_string)
+
+    # If gene_ids is not empty, extract the first match
+    if gene_ids:
+        return gene_ids[0].replace('ID=', '')
+    else:
+        return None  # Return None if no match is found
+
+#---------------------------------------------------------------------------------------------------------------------------
 #This function will read in gff file and save all genes information (coordinates) into a dictionary
 def parse_gff(gff_file):
 	gene_dict = {}
@@ -666,7 +684,8 @@ def parse_gff(gff_file):
 			if not line.startswith('#'):
 				fields = line.strip().split('\t')
 				if len(fields) >= 9 and fields[2] == 'gene':
-					gene_id = fields[8].split(';')[0].replace('ID=', '')
+					#gene_id = fields[8].split(';')[0].replace('ID=', '')
+					gene_id =extract_gene_id(fields[8])
 					gene_dict[gene_id] = (fields[0], int(fields[3]), int(fields[4]))
 	return gene_dict
 	
@@ -675,8 +694,10 @@ def parse_gff(gff_file):
 def find_flanking_genes(scrm_gene_list, gene_dict, scrm_chr, scrm_start, scrm_end):
 	left_flank_gene = None
 	right_flank_gene = None
+	#print(scrm_gene_list)
 	for gene in scrm_gene_list:
 		if gene in gene_dict:
+			#print('present in gene_dict')
 			gene_chr, gene_start, gene_end = gene_dict[gene]
 			if gene_chr == scrm_chr:
 				if scrm_start >= gene_start and scrm_end <= gene_end:
@@ -694,7 +715,8 @@ def find_flanking_genes(scrm_gene_list, gene_dict, scrm_chr, scrm_start, scrm_en
 					left_flank_gene = gene
 				elif gene_start < scrm_end and (right_flank_gene is None or gene_start < gene_dict[right_flank_gene][1]):
 					right_flank_gene = gene
-
+		else:
+			print(gene,'not found in gene_dict')
 	return left_flank_gene, right_flank_gene
 	#log_file.close()
 
@@ -703,6 +725,7 @@ def update_scrmsOut(scrmsOut_file, gene_dict,path_log_file):
 	updated_lines = []
 	with open(scrmsOut_file, 'r') as scrmsOut, open(path_log_file, "a") as logfile:
 		for line in scrmsOut:
+			#print(line)
 			fields = line.strip().split('\t')
 			genes_col6 = fields[5].split(',')
 			genes_col11 = fields[10].split(',')
@@ -715,7 +738,10 @@ def update_scrmsOut(scrmsOut_file, gene_dict,path_log_file):
 				#logfile.write(line)
 				scrm_chr, scrm_start, scrm_end = fields[0], int(fields[1]), int(fields[2])
 				left_flank_gene, right_flank_gene = find_flanking_genes(genes_col6, gene_dict, scrm_chr, scrm_start, scrm_end)
-
+				
+				#print("Here------------------------")
+				#print('left',left_flank_gene)
+				#print('right',right_flank_gene)
 				if left_flank_gene and right_flank_gene:
 					#print('updated',left_flank_gene,'-',right_flank_gene)
 					fields[5] = left_flank_gene
@@ -723,7 +749,7 @@ def update_scrmsOut(scrmsOut_file, gene_dict,path_log_file):
 					fields[10] = right_flank_gene
 					fields[11] = right_flank_gene
 				else:
-					print("NO")
+					print("missing a flanking gene")
 					print(left_flank_gene)
 					print(right_flank_gene)
 			#if right flanking gene has more than one gene and left has just 1 gene, we are gonna loose the third one
@@ -814,7 +840,7 @@ def main():
 	gffFile=os.path.abspath(gffFile)
 	#saving all the genes coorddiates from GFF
 	gene_dict = parse_gff(gffFile)
-	
+	#pprint.pprint(gene_dict)
 	#Parsing the output file into separate files for each training set and each method via creating three dictionaries for each method: keys being the names of training sets associated with that method 
 	scrmJoinedOutputFile=os.path.abspath(scrmJoinedOutputFile)
 	methods_val[0],methods_val[1],methods_val[2]=parse_output(scrmJoinedOutputFile,35000)
