@@ -661,20 +661,32 @@ def extract_topN_scrms_amplitudeCurve(finalExtractedPeaksFileName,finalPeaksFile
 
 #---------------------------------------------------------------------------------------------------------------------------
 #this funnction will take out gene id from the line of gff;  could vary a little bit
+# 
+# def extract_gene_id(input_string):
+#     # Define a regular expression pattern to match 'ID=gene-' followed by any characters until a semicolon or space
+#     pattern = r'ID=gene-[^; ]+'
+# 
+#     # Use the findall function to extract all matching substrings
+#     gene_ids = re.findall(pattern, input_string)
+# 
+#     # If gene_ids is not empty, extract the first match
+#     if gene_ids:
+#         return gene_ids[0].replace('ID=', '')
+#     else:
+#         return None  # Return None if no match is found
+
 
 def extract_gene_id(input_string):
-    # Define a regular expression pattern to match 'ID=gene-' followed by any characters until a semicolon or space
-    pattern = r'ID=gene-[^; ]+'
-
-    # Use the findall function to extract all matching substrings
-    gene_ids = re.findall(pattern, input_string)
-
-    # If gene_ids is not empty, extract the first match
-    if gene_ids:
-        return gene_ids[0].replace('ID=', '')
+    # Try to match 'ID=' followed by any characters until a semicolon or space
+    id_match = re.search(r'ID=([^; ]+)', input_string)
+    
+    if id_match:
+        gene_id = id_match.group(1)
+        #if not gene_id.startswith('gene-'):
+         #   gene_id = 'gene-' + gene_id
+        return gene_id
     else:
-        return None  # Return None if no match is found
-
+        return None  # Return None if no 'ID=' is found
 #---------------------------------------------------------------------------------------------------------------------------
 #This function will read in gff file and save all genes information (coordinates) into a dictionary
 def parse_gff(gff_file):
