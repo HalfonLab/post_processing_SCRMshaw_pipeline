@@ -712,8 +712,8 @@ def find_flanking_genes(scrm_gene_list, gene_dict, scrm_chr, scrm_start, scrm_en
 			#print('present in gene_dict')
 			gene_chr, gene_start, gene_end = gene_dict[gene]
 			if gene_chr == scrm_chr:
+				# SCRM is completely contained within the gene
 				if scrm_start >= gene_start and scrm_end <= gene_end:
-					# SCRM is completely contained within the gene
 					left_flank_gene = right_flank_gene = gene
 				elif scrm_start < gene_start < scrm_end:  # Overlaps on the left side
 					left_flank_gene = gene
@@ -723,6 +723,7 @@ def find_flanking_genes(scrm_gene_list, gene_dict, scrm_chr, scrm_start, scrm_en
 					right_flank_gene = gene
 				#elif scrm_start < gene_end < scrm_end and (right_flank_gene is not None) and left_flank_gene is None:  # both genes are overlapping on the right side
 				#	left_flank_gene = gene
+				#
 				elif gene_end > scrm_start and (left_flank_gene is None or gene_end > gene_dict[left_flank_gene][2]):
 					left_flank_gene = gene
 				elif gene_start < scrm_end and (right_flank_gene is None or gene_start < gene_dict[right_flank_gene][1]):
@@ -761,9 +762,15 @@ def update_scrmsOut(scrmsOut_file, gene_dict,path_log_file):
 					fields[10] = right_flank_gene
 					fields[11] = right_flank_gene
 				else:
-					print("missing a flanking gene")
-					print(left_flank_gene)
-					print(right_flank_gene)
+					#print("missing a flanking gene")
+					#print(left_flank_gene)
+					#print(right_flank_gene)
+					#print("updated",genes_col6[0],'-',genes_col11[1])
+					fields[5] = genes_col6[0]
+					fields[6] = genes_col6[0]
+					fields[10] = genes_col11[1]
+					fields[11] = genes_col11[1]
+
 			#if right flanking gene has more than one gene and left has just 1 gene, we are gonna loose the third one
 			elif len(genes_col6) > 1 and set(genes_col6) != set(genes_col11) and len(genes_col11) ==1:
 				#logfile.write(line)
