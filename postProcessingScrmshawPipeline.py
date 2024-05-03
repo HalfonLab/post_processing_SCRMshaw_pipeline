@@ -802,6 +802,7 @@ def update_scrmsOut(scrmsOut_file, gene_dict,path_log_file):
 def write_updated_scrmsOut(scrmsOut_file, updated_lines):
 	with open(scrmsOut_file, 'w') as scrmsOut:
 		scrmsOut.write('\n'.join(updated_lines))
+		scrmsOut.write('\n')  #adds newline at end of final line so file concatenate properly later on
 	#pathFinal=os.path.abspath(scrmsOut)
 	#path=os.path.abspath(peaksToScrmsName)
 	for root, dirs, files in os.walk(os.getcwd()):
