@@ -16,7 +16,7 @@ for task in task_offset_0_1 task_offset_10_2 task_offset_20_3 task_offset_30_4 t
 do 
 	echo $task
 	echo $i
-	perl /projects/academic/mshalfon/Scripts/Generate_top_N_SCRMhits.pl -d $task -n 5000 -o scrmshawOutput_offset_$i.5000scrms
+	perl ./Scripts/Generate_top_N_SCRMhits.pl -d $task -n 5000 -o scrmshawOutput_offset_$i.5000scrms
 	let i=i+10
 
 
@@ -33,7 +33,7 @@ mv scrmshawOutput_offset*5000scrms scrmsIndividualHits_0to240offset/
 
 ########## now run the post processing pipeline #################
 
-python /projects/academic/mshalfon/Scripts/postProcessingScrmshawPipeline.py -num 5000 -topN Median -so scrmshawOutput_offset_0to240.bed -gff $GFF_file 
+python ./Scripts/postProcessingScrmshawPipeline.py -num 5000 -topN Median -so scrmshawOutput_offset_0to240.bed -gff $GFF_file 
 
 #concatenate results
 cat scrmshawOutput_peaksCalled_* > peaks_AllSets.bed 
