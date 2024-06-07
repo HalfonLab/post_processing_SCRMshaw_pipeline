@@ -2,11 +2,6 @@
 
 ##this version updated 06-06-2024 to include options for outputting GFF results
 
-#usage message:
-if [ "$#" -lt 1 ]; then
-  echo "Usage: sbatch Slurm_postProcessing_HalfonLab.sh -i <GFF file used for the SCRMshaw run> -g [optional]"
-  echo "The -g flag causes an additional output file in GFFv3 format, sorted using gff3_toolkit. The unsorted version is file tmp.gff"
-fi
 
 #SBATCH --partition=general-compute
 #SBATCH --qos=general-compute
@@ -17,6 +12,13 @@ fi
 #SBATCH --output="output_postProcessing.txt"
 #SBATCH --mail-user=
 #SBATCH --mail-type=ALL
+
+#usage message:
+if [ "$#" -lt 1 ]; then
+  echo "Usage: sbatch Slurm_postProcessing_HalfonLab.sh -i <GFF file used for the SCRMshaw run> -g [optional]"
+  echo "The -g flag causes an additional output file in GFFv3 format, sorted using gff3_toolkit. The unsorted version is file tmp.gff"
+fi
+
 
 module load foss
 module load scipy-bundle
